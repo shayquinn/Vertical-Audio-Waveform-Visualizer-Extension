@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Vertical Audio Waveform Visualizer",
+  "version": "1.0",
+  "description": "Shows a vertical audio waveform visualization bar when audio is playing",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "visualizer.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "favicon-16x16.png",
+    "32": "favicon-32x32.png",
+    "48": "android-chrome-192x192.png",
+    "128": "android-chrome-512x512.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Audio Waveform Visualizer",
+    "default_icon": {
+      "16": "favicon-16x16.png",
+      "32": "favicon-32x32.png",
+      "48": "android-chrome-192x192.png",
+      "128": "android-chrome-512x512.png"
+    }
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  }
+}
