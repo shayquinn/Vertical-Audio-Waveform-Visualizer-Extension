@@ -32,7 +32,7 @@ The visualizer creates a 120px wide vertical bar on the right edge of your brows
   - **Drag Left/Right**: Adjust number of bars (fewer/more)
 - Shows peak indicators that track maximum audio levels
 - Disappears when audio stops or is paused
-- Works on any website including YouTube, Netflix, Spotify Web Player, SoundCloud, etc.
+- Works on major streaming sites: YouTube, Spotify, Netflix, SoundCloud, Twitch, and more
 
 ## 🚀 Installation
 
@@ -158,14 +158,20 @@ The visualizer is fully interactive! Hover over it and you'll see a "grab" curso
 
 ### Supported Sites
 
-- ✅ YouTube
-- ✅ Netflix
-- ✅ Spotify Web Player
-- ✅ SoundCloud
-- ✅ Twitch
-- ✅ Any HTML5 video/audio player
-- ✅ Local media files (if opened in browser)
-- ✅ Any website with embedded audio/video
+- ✅ YouTube (youtube.com, music.youtube.com)
+- ✅ Spotify Web Player (open.spotify.com)
+- ✅ SoundCloud (soundcloud.com)
+- ✅ Twitch (twitch.tv)
+- ✅ Vimeo (vimeo.com)
+- ✅ Netflix (netflix.com)
+- ✅ Hulu (play.hulu.com)
+- ✅ Disney+ (disneyplus.com)
+- ✅ Amazon Music (music.amazon.com)
+- ✅ Deezer (deezer.com)
+- ✅ Mixcloud (mixcloud.com)
+- ✅ Bandcamp (bandcamp.com)
+
+**Note:** The extension is configured to work on these major streaming platforms. To add support for additional sites, you can modify the `host_permissions` and `content_scripts` matches in `manifest.json`.
 
 ## ⚙️ Configuration
 
@@ -196,9 +202,9 @@ const CONFIG = {
 
 This extension requires the following permissions:
 
-- **`activeTab`** - To inject the visualizer into the current tab
-- **`storage`** - To save your color and bar count preferences
-- **`<all_urls>`** - To work on any website with audio/video content
+- **`storage`** - To save your color, bar count, and width preferences
+- **`host_permissions`** - Access to specific streaming sites (YouTube, Spotify, Netflix, etc.) to inject the visualizer
+- **Content script injection** - Runs `visualizer.js` on supported streaming sites only
 
 ### Is This Extension Safe? ✅
 
@@ -206,12 +212,9 @@ This extension requires the following permissions:
 
 - ✅ **No data collection** - Doesn't collect, store, or transmit any user data
 - ✅ **No external requests** - Doesn't connect to any external servers
+- ✅ **Targeted site support** - Works only on approved streaming platforms for better security
+- ✅ **Minimal permissions** - Only accesses specific music/video streaming sites
 - ✅ **No tracking** - Doesn't monitor your browsing or behavior
-- ✅ **No audio recording** - Only analyzes audio frequencies, never records or saves audio
-- ✅ **Open source** - All code is visible and can be reviewed in this repository
-- ✅ **Local execution** - Everything runs entirely in your browser
-- ✅ **Read-only access** - Only reads audio data, doesn't modify media playback
-- ✅ **Minimal permissions** - Only uses necessary permissions for core functionality
 
 ### What the Extension Does Access
 
@@ -239,6 +242,7 @@ This extension requires the following permissions:
 ## 🐛 Troubleshooting
 
 **Visualizer doesn't appear:**
+- Make sure you're on a supported streaming site (see Supported Sites section)
 - Make sure the audio/video is not muted
 - Check that the extension is enabled (click the extension icon)
 - Open browser console (F12) and look for `[Visualizer]` messages
@@ -286,16 +290,15 @@ This extension requires the following permissions:
 ## 📁 Project Structure
 
 ```
-├── manifest.json           # Extension configuration and permissions
-├── background.js           # Service worker for extension lifecycle
-├── visualizer.js           # Main visualization logic (content script)
-├── popup.html              # Extension popup interface
-├── popup.js                # Popup interaction logic
-├── favicon-16x16.png       # Extension icon (16x16)
-├── favicon-32x32.png       # Extension icon (32x32)
-├── apple-touch-icon.png    # Extension icon (180x180)
-├── android-chrome-192x192.png  # Extension icon (192x192)
-└── android-chrome-512x512.png  # Extension icon (512x512)
+├── manifest.json              # Extension configuration and permissions
+├── background.js              # Service worker for extension lifecycle
+├── visualizer.js              # Main visualization logic (content script)
+├── popup.html                 # Extension popup interface
+├── popup.js                   # Popup interaction logic
+├── favicon-16x16.png          # Extension icon (16x16)
+├── favicon-32x32.png          # Extension icon (32x32)
+├── android-chrome-192x192.png # Extension icon (192x192)
+└── android-chrome-512x512.png # Extension icon (512x512)
 ```
 
 ## 🆚 Extension vs Userscript
