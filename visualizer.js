@@ -57,10 +57,15 @@
 
 
 
-    // Track mouse position for bar hover effect
+    // Track mouse position for bar hover effect (throttled)
+    let mouseThrottleId = null;
     visualizerContainer.addEventListener('mousemove', (e) => {
-        const rect = visualizerContainer.getBoundingClientRect();
-        hoverY = e.clientY - rect.top;
+        if (mouseThrottleId) return;
+        mouseThrottleId = requestAnimationFrame(() => {
+            const rect = visualizerContainer.getBoundingClientRect();
+            hoverY = e.clientY - rect.top;
+            mouseThrottleId = null;
+        });
     });
 
     visualizerContainer.addEventListener('mouseleave', () => {
@@ -124,25 +129,7 @@
     };
     let lastHueRotation = null;
 
-    function saveSettings() {
-        browserAPI.storage.sync.set({
-            hueRotation: hueRotation,
-            barCount: dynamicNumBars,
-            barWidth: CONFIG.barWidth
-        });
 
-        // Also update popup if it's open
-        try {
-            browserAPI.runtime.sendMessage({
-                action: 'updatePopupSliders',
-                hueRotation: hueRotation,
-                barCount: dynamicNumBars,
-                barWidth: CONFIG.barWidth
-            });
-        } catch (e) {
-            // Popup might not be open, that's OK
-        }
-    }
 
     // Load settings from browser storage
     function loadSettings() {
@@ -525,6 +512,49 @@
         return color;
     }
 
+    // Cached gradients for performance
+    let cachedGradients = {
+        top: null,
+        bottom: null,
+        lastHue: null,
+        lastCanvasHeight: null
+    };
+
+    // Create or retrieve cached gradients
+    function getGradients(canvasHeight, centerY) {
+        if (cachedGradients.top && 
+            cachedGradients.lastHue === hueRotation && 
+            cachedGradients.lastCanvasHeight === canvasHeight) {
+            return {
+                top: cachedGradients.top,
+                bottom: cachedGradients.bottom
+            };
+        }
+
+        // Create new gradients
+        const gradientTop = ctx.createLinearGradient(0, 0, 0, centerY);
+        gradientTop.addColorStop(0, getRotatedColor('#ff0080'));
+        gradientTop.addColorStop(0.33, getRotatedColor('#8000ff'));
+        gradientTop.addColorStop(0.66, getRotatedColor('#0080ff'));
+        gradientTop.addColorStop(1, getRotatedColor('#00ff80'));
+
+        const gradientBottom = ctx.createLinearGradient(0, centerY, 0, canvasHeight);
+        gradientBottom.addColorStop(0, getRotatedColor('#00ff80'));
+        gradientBottom.addColorStop(0.33, getRotatedColor('#0080ff'));
+        gradientBottom.addColorStop(0.66, getRotatedColor('#8000ff'));
+        gradientBottom.addColorStop(1, getRotatedColor('#ff0080'));
+
+        // Cache them
+        cachedGradients = {
+            top: gradientTop,
+            bottom: gradientBottom,
+            lastHue: hueRotation,
+            lastCanvasHeight: canvasHeight
+        };
+
+        return { top: gradientTop, bottom: gradientBottom };
+    }
+
     // Draw gradient bars visualization
     function drawGradientBars() {
         if (!analyzer || !dataArray) return;
@@ -550,17 +580,10 @@
             }
         }
 
-        const gradientTop = ctx.createLinearGradient(0, 0, 0, centerY);
-        gradientTop.addColorStop(0, getRotatedColor('#ff0080'));
-        gradientTop.addColorStop(0.33, getRotatedColor('#8000ff'));
-        gradientTop.addColorStop(0.66, getRotatedColor('#0080ff'));
-        gradientTop.addColorStop(1, getRotatedColor('#00ff80'));
-
-        const gradientBottom = ctx.createLinearGradient(0, centerY, 0, canvasHeight);
-        gradientBottom.addColorStop(0, getRotatedColor('#00ff80'));
-        gradientBottom.addColorStop(0.33, getRotatedColor('#0080ff'));
-        gradientBottom.addColorStop(0.66, getRotatedColor('#8000ff'));
-        gradientBottom.addColorStop(1, getRotatedColor('#ff0080'));
+        // Get cached gradients
+        const gradients = getGradients(canvasHeight, centerY);
+        const gradientTop = gradients.top;
+        const gradientBottom = gradients.bottom;
 
         // Update which bar is being hovered based on mouse Y position
         if (hoverY !== null) {
@@ -632,14 +655,17 @@
             const topBrightness = getBarBrightness(i * 2 - 1);
             const bottomBrightness = getBarBrightness(i * 2);
 
-            // Top half
-            const topGradient = ctx.createLinearGradient(0, 0, 0, centerY);
-            topGradient.addColorStop(0, brightenColor(getRotatedColor('#ff0080'), topBrightness));
-            topGradient.addColorStop(0.33, brightenColor(getRotatedColor('#8000ff'), topBrightness));
-            topGradient.addColorStop(0.66, brightenColor(getRotatedColor('#0080ff'), topBrightness));
-            topGradient.addColorStop(1, brightenColor(getRotatedColor('#00ff80'), topBrightness));
-
-            ctx.fillStyle = topGradient;
+            // Top half - use cached gradient or create on-demand if brightness needed
+            if (topBrightness > 0.01) {
+                const topGradient = ctx.createLinearGradient(0, 0, 0, centerY);
+                topGradient.addColorStop(0, brightenColor(getRotatedColor('#ff0080'), topBrightness));
+                topGradient.addColorStop(0.33, brightenColor(getRotatedColor('#8000ff'), topBrightness));
+                topGradient.addColorStop(0.66, brightenColor(getRotatedColor('#0080ff'), topBrightness));
+                topGradient.addColorStop(1, brightenColor(getRotatedColor('#00ff80'), topBrightness));
+                ctx.fillStyle = topGradient;
+            } else {
+                ctx.fillStyle = gradientTop;
+            }
             ctx.fillRect(5, yTop, barWidth, barHeight - CONFIG.barSpacing * 2);
 
             if (barWidth > 20 || topBrightness > 0.3) {
@@ -649,14 +675,17 @@
                 ctx.shadowBlur = 0;
             }
 
-            // Bottom half
-            const bottomGradient = ctx.createLinearGradient(0, centerY, 0, canvasHeight);
-            bottomGradient.addColorStop(0, brightenColor(getRotatedColor('#00ff80'), bottomBrightness));
-            bottomGradient.addColorStop(0.33, brightenColor(getRotatedColor('#0080ff'), bottomBrightness));
-            bottomGradient.addColorStop(0.66, brightenColor(getRotatedColor('#8000ff'), bottomBrightness));
-            bottomGradient.addColorStop(1, brightenColor(getRotatedColor('#ff0080'), bottomBrightness));
-
-            ctx.fillStyle = bottomGradient;
+            // Bottom half - use cached gradient or create on-demand if brightness needed
+            if (bottomBrightness > 0.01) {
+                const bottomGradient = ctx.createLinearGradient(0, centerY, 0, canvasHeight);
+                bottomGradient.addColorStop(0, brightenColor(getRotatedColor('#00ff80'), bottomBrightness));
+                bottomGradient.addColorStop(0.33, brightenColor(getRotatedColor('#0080ff'), bottomBrightness));
+                bottomGradient.addColorStop(0.66, brightenColor(getRotatedColor('#8000ff'), bottomBrightness));
+                bottomGradient.addColorStop(1, brightenColor(getRotatedColor('#ff0080'), bottomBrightness));
+                ctx.fillStyle = bottomGradient;
+            } else {
+                ctx.fillStyle = gradientBottom;
+            }
             ctx.fillRect(5, yBottom, barWidth, barHeight - CONFIG.barSpacing * 2);
 
             if (barWidth > 20 || bottomBrightness > 0.3) {
@@ -679,9 +708,9 @@
     function draw() {
         if (!isVisualizing) return;
 
+        // FIXED: Stop animation when tab is hidden to save CPU
         if (document.hidden) {
-            animationFrameId = requestAnimationFrame(draw);
-            return;
+            return; // Don't request another frame
         }
 
         drawGradientBars();
@@ -875,10 +904,16 @@
             subtree: true
         });
 
+        // Throttle resize events
         let resizeTimeout;
+        let resizeThrottleId = null;
         window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(resizeCanvas, 100);
+            if (resizeThrottleId) return;
+            resizeThrottleId = requestAnimationFrame(() => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(resizeCanvas, 100);
+                resizeThrottleId = null;
+            });
         });
 
         document.addEventListener('visibilitychange', () => {
@@ -926,41 +961,46 @@
             e.stopPropagation();
         });
 
-        // Mouse move for dragging
+        // Mouse move for dragging (throttled)
+        let dragThrottleId = null;
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
+            if (dragThrottleId) return;
+            
+            dragThrottleId = requestAnimationFrame(() => {
+                const deltaY = dragStartY - e.clientY;
+                const deltaX = e.clientX - dragStartX;
 
-            const deltaY = dragStartY - e.clientY;
-            const deltaX = e.clientX - dragStartX;
-
-            // Vertical drag: rotate hue
-            if (Math.abs(deltaY) > 0) {
-                hueRotation = (hueRotation + deltaY * 0.5) % 360;
-                if (hueRotation < 0) hueRotation += 360;
-                settingsChanged = true;
-                dragStartY = e.clientY;
-            }
-
-            // Horizontal drag: adjust bar count
-            if (Math.abs(deltaX) > 2) {
-                const barChange = Math.sign(deltaX);
-                const newBarCount = Math.max(MIN_BARS, Math.min(MAX_BARS, dynamicNumBars + barChange));
-
-                if (newBarCount !== dynamicNumBars) {
-                    dynamicNumBars = newBarCount;
+                // Vertical drag: rotate hue
+                if (Math.abs(deltaY) > 0) {
+                    hueRotation = (hueRotation + deltaY * 0.5) % 360;
+                    if (hueRotation < 0) hueRotation += 360;
                     settingsChanged = true;
+                    dragStartY = e.clientY;
                 }
-                dragStartX = e.clientX;
-            }
 
-            // Show drag info
-            if (dragIndicator) {
-                dragIndicator.textContent = `Hue: ${Math.round(hueRotation)}° | Bars: ${dynamicNumBars}`;
-                dragIndicator.style.display = 'block';
-                dragIndicator.style.right = `${CONFIG.barWidth + 10}px`;
-            }
+                // Horizontal drag: adjust bar count
+                if (Math.abs(deltaX) > 2) {
+                    const barChange = Math.sign(deltaX);
+                    const newBarCount = Math.max(MIN_BARS, Math.min(MAX_BARS, dynamicNumBars + barChange));
 
-            e.preventDefault();
+                    if (newBarCount !== dynamicNumBars) {
+                        dynamicNumBars = newBarCount;
+                        settingsChanged = true;
+                    }
+                    dragStartX = e.clientX;
+                }
+
+                // Show drag info
+                if (dragIndicator) {
+                    dragIndicator.textContent = `Hue: ${Math.round(hueRotation)}° | Bars: ${dynamicNumBars}`;
+                    dragIndicator.style.display = 'block';
+                    dragIndicator.style.right = `${CONFIG.barWidth + 10}px`;
+                }
+
+                e.preventDefault();
+                dragThrottleId = null;
+            });
         });
 
         // Touch move handler
@@ -1038,8 +1078,4 @@
         init();
     }
 
-<<<<<<< HEAD
 })();
-=======
-})();
->>>>>>> ddb22c4e0db56ece4abefbfd66687bb9a67eb87c
