@@ -10,7 +10,7 @@ if (hoverY !== null) {
         const barIndexFromTop = Math.floor((distanceFromCenter - barHeight / 2) / barHeight) + 1;
         hoveredBarIndex = barIndexFromTop * 2 - 1; // Top bars use odd indices
     } else {
-        // Mouse is in bottom half  
+        // Mouse is in bottom half
         const distanceFromCenter = hoverY - centerY;
         const barIndexFromBottom = Math.floor((distanceFromCenter - barHeight / 2) / barHeight) + 1;
         hoveredBarIndex = barIndexFromBottom * 2; // Bottom bars use even indices
