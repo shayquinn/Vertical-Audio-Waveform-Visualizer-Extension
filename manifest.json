@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vertical Audio Waveform Visualizer",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "Real-time vertical audio waveform visualization for streaming sites",
   
   "permissions": [
