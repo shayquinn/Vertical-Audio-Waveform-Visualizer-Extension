@@ -4,6 +4,8 @@ A beautiful, interactive, real-time audio visualization browser extension that d
 
 ![Extension Type](https://img.shields.io/badge/Type-Browser%20Extension-blue) ![Version](https://img.shields.io/badge/Version-2.0-green) ![Interactive](https://img.shields.io/badge/Interactive-Yes-brightgreen)
 
+![Demo](Screenshot.png)
+
 ## ✨ Features
 
 - 🎵 **Real-time Audio Visualization** - Displays live frequency bars that animate with your audio
